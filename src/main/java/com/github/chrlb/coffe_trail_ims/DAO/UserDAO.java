@@ -122,6 +122,35 @@ public class UserDAO {
     }
   }
   
+  public ResultSet getUsersLogs(){
+    try{
+      sql = """
+        SELECT 
+          L.logID,
+          L.userID,
+          U.username,
+          L.loginDate,
+          L.logoutDate,
+          TIME_FORMAT(
+            TIMEDIFF(L.logoutDate, L.loginDate), '%H:%i:%s'
+          ) AS 'Session Duration'
+
+        FROM tbl_userlogs AS L
+
+        INNER JOIN tbl_users AS U 
+          ON L.userID = U.userID
+
+        ORDER BY logID DESC;
+      """;
+      
+      pstmt = conn.prepareStatement(sql);
+      return pstmt.executeQuery();
+    }catch(SQLException ex){
+      ex.printStackTrace();
+      return null;
+    }
+  }
+  
   public int updateUserInfo(String new_username, String new_fullname, int userID){
     try{
       sql = """

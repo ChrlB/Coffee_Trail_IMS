@@ -4,10 +4,9 @@
  */
 package com.github.chrlb.coffe_trail_ims.UI.Windows;
 
+import com.github.chrlb.coffe_trail_ims.DAO.UserDAO;
 import com.github.chrlb.coffe_trail_ims.UI.Windows.User;
 import java.awt.Color;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -27,9 +26,9 @@ public class UserLogs extends JFrame {
   Connection conn;
   Header header;
   
+  UserDAO userDAO;
+  
   ResultSet rs;
-  String sql;
-  PreparedStatement pstmt;
 
   TableBuilder userlogs_tbl;
   JScrollPane userlogs_tbl_scrollpane;
@@ -39,30 +38,12 @@ public class UserLogs extends JFrame {
       this.conn = DBConnection.getInstance().getDBConnection();
       this.user_ID = UserSession.getInstance().getUserID();
       header = new Header();
-
-      sql = """
-          SELECT 
-            L.logID,
-            L.userID,
-            U.username,
-            L.loginDate,
-            L.logoutDate,
-            TIME_FORMAT(
-              TIMEDIFF(L.logoutDate, L.loginDate), '%H:%i:%s'
-            ) AS 'Session Duration'
-            
-          FROM tbl_userlogs AS L
-
-          INNER JOIN tbl_users AS U 
-            ON L.userID = U.userID
-
-          ORDER BY logID DESC;
-        """;
-      pstmt = conn.prepareStatement(sql);
-      rs = pstmt.executeQuery();
+      
+      userDAO = new UserDAO();
+      
+      rs = userDAO.getUsersLogs();
 
       userlogs_tbl = new TableBuilder(rs);
-
       userlogs_tbl_scrollpane = new JScrollPane(userlogs_tbl);
       userlogs_tbl_scrollpane.setBounds(30,160,1200,360);
 

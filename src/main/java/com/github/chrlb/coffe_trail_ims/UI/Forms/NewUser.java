@@ -31,9 +31,6 @@ public class NewUser extends JFrame{
                    password_field,
                    confirm_password_field;
   
-  String sql;
-  PreparedStatement pstmt;
-  
   LabelBuilder  username_field_label,
                 full_name_field_label,
                 password_field_label,
