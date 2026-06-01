@@ -4,6 +4,10 @@
  */
 package com.github.chrlb.coffe_trail_ims.UI.Windows;
 
+import com.github.chrlb.coffe_trail_ims.DAO.CategoryDAO;
+import com.github.chrlb.coffe_trail_ims.DAO.OrderDAO;
+import com.github.chrlb.coffe_trail_ims.DAO.ProductDAO;
+import com.github.chrlb.coffe_trail_ims.DAO.UserDAO;
 import com.github.chrlb.coffe_trail_ims.UI.Windows.Dashboard;
 import java.awt.Color;
 import java.sql.Connection;
@@ -29,6 +33,12 @@ import com.github.chrlb.coffe_trail_ims.UI.Icons.IconsHandler;
 public class Sales extends JFrame{
     int user_ID;
     Connection conn;
+    
+    OrderDAO orderDAO;
+    ProductDAO productDAO;
+    CategoryDAO categoryDAO;
+    UserDAO userDAO;
+    
     Header header;
     
     TableBuilder sales_tbl;
@@ -63,6 +73,12 @@ public class Sales extends JFrame{
       try{  
         this.conn = DBConnection.getInstance().getDBConnection();
         this.user_ID = UserSession.getInstance().getUserID();
+        
+        orderDAO = new OrderDAO();
+        productDAO = new ProductDAO();
+        categoryDAO = new CategoryDAO();
+        userDAO = new UserDAO();
+        
         header = new Header();
         
         footer_panel = new JPanel();
@@ -101,37 +117,33 @@ public class Sales extends JFrame{
         product_combobox.addActionListener((a) -> { refreshTable();} );
         
         //  order_combobox
-        sql = "SELECT orderID FROM tbl_orders ORDER BY orderID DESC; ";
-        pstmt = conn.prepareStatement(sql);
-        rs = pstmt.executeQuery();
+        rs = orderDAO.getOrdersOrderID();
         while(rs.next()){ order_combobox.addItem(rs.getString("orderID")); }
         
         
         //  customer_combobox
-        sql = "SELECT  DISTINCT customerName AS customerName, orderDate FROM tbl_orders ORDER BY orderDate DESC; ";
-        pstmt = conn.prepareStatement(sql);
-        rs = pstmt.executeQuery();
+        rs = orderDAO.getOrdersCustomerName();
         while(rs.next()){ customer_combobox.addItem(rs.getString("customerName")); }
         
         
         //  user_combobox
-        sql = "SELECT  username FROM tbl_users; ";
-        pstmt = conn.prepareStatement(sql);
-        rs = pstmt.executeQuery();
+//        sql = "SELECT  username FROM tbl_users; ";
+//        pstmt = conn.prepareStatement(sql);
+        rs = userDAO.getUserNames();
         while(rs.next()){ user_combobox.addItem(rs.getString("username")); }
         
         
         //  product_category_combobox
-        sql = "SELECT categoryName FROM tbl_categories;";
-        pstmt = conn.prepareStatement(sql);
-        rs = pstmt.executeQuery();
+//        sql = "SELECT categoryName FROM tbl_categories;";
+//        pstmt = conn.prepareStatement(sql);
+        rs = categoryDAO.getCategoryNames();
         while(rs.next()){ product_category_combobox.addItem(rs.getString("categoryName")); }
         
         
         // product_combobox
-        sql = "SELECT  productName FROM tbl_products; ";
-        pstmt = conn.prepareStatement(sql);
-        rs = pstmt.executeQuery();
+//        sql = "SELECT  productName FROM tbl_products; ";
+//        pstmt = conn.prepareStatement(sql);
+        rs = productDAO.getProductNames();
         while(rs.next()){ product_combobox.addItem(rs.getString("productName")); }
         
         

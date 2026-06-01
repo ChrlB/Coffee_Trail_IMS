@@ -56,6 +56,20 @@ public class CategoryDAO {
     }
   }
   
+  public ResultSet getCategoryNames(){
+    try{
+      sql = """
+        SELECT categoryName FROM tbl_categories;
+      """;
+      
+      pstmt = conn.prepareStatement(sql);
+      return pstmt.executeQuery();
+    }catch(SQLException ex){
+      ex.printStackTrace();
+      return null;
+    }
+  }
+  
   public int setCategoryStatus(String categoryName, boolean isActive){
     try{
       sql = """

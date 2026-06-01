@@ -137,6 +137,20 @@ public class ProductDAO {
     
   }
   
+  public ResultSet getProductNames(){
+    try{
+      sql = """
+        SELECT  productName FROM tbl_products; 
+      """;
+      
+      pstmt = conn.prepareStatement(sql);
+      return pstmt.executeQuery();
+    }catch(SQLException ex){
+      ex.printStackTrace();
+      return null;
+    }
+  }
+  
   public int setProductStatus(int productID, boolean isActive){
    try{
      sql = """

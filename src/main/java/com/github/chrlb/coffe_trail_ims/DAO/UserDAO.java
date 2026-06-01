@@ -151,6 +151,20 @@ public class UserDAO {
     }
   }
   
+  public ResultSet getUserNames(){
+    try{
+      sql = """
+        SELECT username FROM tbl_users; 
+      """;
+      
+      pstmt = conn.prepareStatement(sql);
+      return pstmt.executeQuery();
+    }catch(SQLException ex){
+      ex.printStackTrace();
+      return null;
+    }
+  }
+  
   public int updateUserInfo(String new_username, String new_fullname, int userID){
     try{
       sql = """
