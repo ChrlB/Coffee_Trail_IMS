@@ -4,7 +4,6 @@
  */
 package com.github.chrlb.coffe_trail_ims.Services;
 
-import java.io.FileInputStream;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.util.Properties;
@@ -21,7 +20,6 @@ public class DBConnection {
   private DBConnection(){
     try{
       Properties prop = new Properties();
-      //prop.load(new FileInputStream("db.properties"));
       prop.load(getClass().getClassLoader().getResourceAsStream("db.properties"));
       
       String url = prop.getProperty("DB_URL");

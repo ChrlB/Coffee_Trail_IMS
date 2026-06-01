@@ -4,6 +4,7 @@
  */
 package com.github.chrlb.coffe_trail_ims.UI.Forms;
 
+import com.github.chrlb.coffe_trail_ims.DAO.CategoryDAO;
 import java.awt.Color;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -26,6 +27,8 @@ public class NewCategory extends JFrame{
   Category parent;
   Connection conn;
   
+  CategoryDAO categoryDAO;
+  
   TextFieldBuilder category_name_field,
                      description_field,
                      unit_field;
@@ -45,6 +48,7 @@ public class NewCategory extends JFrame{
     this.parent = parent;
     this.conn = DBConnection.getInstance().getDBConnection();
     
+    categoryDAO = new CategoryDAO();
     
     category_name_field_label = new LabelBuilder("Category Name: ",30,50,150,50,15);
     description_field_label= new LabelBuilder("Discription: ",30,130,150,50,15);
@@ -101,59 +105,60 @@ public class NewCategory extends JFrame{
   }
   
   void addCategory(){
-      try{
-         String new_category_name = category_name_field.getText().trim();
-         String new_description = description_field.getText().trim();
-         String new_unit = unit_field.getText().trim();
-         
-        if (new_category_name.isEmpty() ||  new_unit.isEmpty()){
-             JOptionPane.showMessageDialog(null,
-                "Category Name Unit and LowStockThreshold cannot be empty or 0.",
-                "Validation Error", JOptionPane.WARNING_MESSAGE);
-         return;
-        }
-        
-        sql = """
-            SELECT *
-            FROM tbl_categories
-            WHERE   categoryName = UPPER(?);       
-          """;
+    try{
+      String new_category_name = category_name_field.getText().trim();
+      String new_description = description_field.getText().trim();
+      String new_unit = unit_field.getText().trim();
 
-        pstmt = conn.prepareStatement(sql);
-        pstmt.setString(1,new_category_name);
-        
-        rs = pstmt.executeQuery();
-        
-        if(rs.next()){
-            JOptionPane.showMessageDialog(null,
-                    "\"" + new_category_name + "\" already exists in the category.\n"
-                    + "Please check your category table.",
-                  "Category Already Exists", JOptionPane.WARNING_MESSAGE);
-          return;
-        }
-        
-        int command = JOptionPane.showConfirmDialog(null,
-              "Do you want to proceed Adding this category?",
-              "NEW CATEGORY CONFIRMATION", JOptionPane.OK_CANCEL_OPTION
-        );
-       if (!(command == JOptionPane.OK_OPTION)) return;
-       
-       sql = """
-            INSERT INTO tbl_categories(
-                categoryName,
-                description,
-                unit
-              )
-            VALUES(UPPER(?),?,?);
-          """;
+      if (new_category_name.isEmpty() ||  new_unit.isEmpty()){
+           JOptionPane.showMessageDialog(null,
+              "Category Name Unit and LowStockThreshold cannot be empty or 0.",
+              "Validation Error", JOptionPane.WARNING_MESSAGE);
+       return;
+      }
 
-       pstmt = conn.prepareStatement(sql);
-       pstmt.setString(1,new_category_name);
-       pstmt.setString(2,new_description);
-       pstmt.setString(3,new_unit);
-       
-      int rowsAffected = pstmt.executeUpdate();
-      
+//        sql = """
+//            SELECT *
+//            FROM tbl_categories
+//            WHERE   categoryName = UPPER(?);       
+//          """;
+//
+//        pstmt = conn.prepareStatement(sql);
+//        pstmt.setString(1,new_category_name);
+//        
+//        rs = pstmt.executeQuery();
+
+      boolean isCategoryAlreadyExists = categoryDAO.isCategoryAlreadyExists(new_category_name);
+
+      if(isCategoryAlreadyExists){
+          JOptionPane.showMessageDialog(null,
+                  "\"" + new_category_name + "\" already exists in the category.\n"
+                  + "Please check your category table.",
+                "Category Already Exists", JOptionPane.WARNING_MESSAGE);
+        return;
+      }
+
+      int command = JOptionPane.showConfirmDialog(null,
+            "Do you want to proceed Adding this category?",
+            "NEW CATEGORY CONFIRMATION", JOptionPane.OK_CANCEL_OPTION
+      ); if (!(command == JOptionPane.OK_OPTION)) return;
+
+//      sql = """
+//        INSERT INTO tbl_categories(
+//            categoryName,
+//            description,
+//            unit
+//          )
+//        VALUES(UPPER(?),?,?);
+//      """;
+//
+//      pstmt = conn.prepareStatement(sql);
+//      pstmt.setString(1,new_category_name);
+//      pstmt.setString(2,new_description);
+//      pstmt.setString(3,new_unit);
+
+      int rowsAffected = categoryDAO.addNewCategory(new_category_name, new_description, new_unit);
+
       if (rowsAffected > 0) {
           JOptionPane.showMessageDialog(null,
                   "Category successfully added.",
@@ -166,9 +171,9 @@ public class NewCategory extends JFrame{
                   "Failed", JOptionPane.WARNING_MESSAGE);
           closeWindow();
       }
-      }catch(Exception ex){
-          ex.printStackTrace();
-      }
+    }catch(Exception ex){
+        ex.printStackTrace();
+    }
     
   }
   

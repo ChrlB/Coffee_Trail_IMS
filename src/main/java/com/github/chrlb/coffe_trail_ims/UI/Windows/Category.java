@@ -4,6 +4,8 @@
  */
 package com.github.chrlb.coffe_trail_ims.UI.Windows;
 
+import com.github.chrlb.coffe_trail_ims.DAO.CategoryDAO;
+import com.github.chrlb.coffe_trail_ims.DAO.ProductDAO;
 import java.awt.Color;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
@@ -34,6 +36,10 @@ import com.github.chrlb.coffe_trail_ims.UI.Icons.IconsHandler;
 public class Category extends JFrame{
     int user_ID;
     Connection conn;
+    
+    CategoryDAO categoryDAO;
+    ProductDAO productDAO;
+    
     Header header;
     JPanel category_form_panel;
     
@@ -54,8 +60,6 @@ public class Category extends JFrame{
     JScrollPane category_tbl_scrollpane;
     
     ResultSet rs;
-    String sql;
-    PreparedStatement pstmt;
     
     ComboBoxBuilder category_combobox;
     
@@ -67,7 +71,8 @@ public class Category extends JFrame{
         this.user_ID = UserSession.getInstance().getUserID();
         header = new Header();
         
-        
+        categoryDAO = new CategoryDAO();
+        productDAO = new ProductDAO();
         
         category_name_field_label = new LabelBuilder("Category Name: ",30,50,150,50,15);
         description_field_label= new LabelBuilder("Discription: ",30,130,150,50,15);
@@ -87,7 +92,7 @@ public class Category extends JFrame{
         update_btn = new ButtonBuilder("UPDATE",250, 320, 200, 50,15);
         delete_btn = new ButtonBuilder("DELETE",30, 320, 200, 50,15);
         
-        new_btn.addActionListener((a) -> { new NewCategory(this);this.setEnabled(false);} );
+        new_btn.addActionListener((a) -> { new NewCategory(this); this.setEnabled(false);} );
         update_btn.addActionListener((a) -> { updateCategory();} );
         delete_btn.addActionListener((a) -> { deleteCategory();} );
         
@@ -114,17 +119,8 @@ public class Category extends JFrame{
         category_form_panel.add(update_btn);
         
         
-        sql = """
-            SELECT 
-                categoryName,
-                description,
-                unit
-            FROM tbl_categories
-            WHERE isActive = 1;
-             """;
-        pstmt = conn.prepareStatement(sql);
-        rs = pstmt.executeQuery();
         
+        rs = categoryDAO.getCategories(true);
         category_tbl = new TableBuilder(rs);
         category_tbl.addMouseListener(new MouseAdapter() {
          @Override
@@ -172,24 +168,14 @@ public class Category extends JFrame{
     
     public void refreshTable(){
       try{
-        int isActive = (category_combobox.getSelectedItem().toString().equals("Active"))? 1:0;
+        boolean isActive = (category_combobox.getSelectedItem().toString().equals("Active"));
       
-        readd_category_btn.setEnabled((isActive != 1));
-        delete_btn.setEnabled((isActive == 1));
-        update_btn.setEnabled((isActive == 1));
+        readd_category_btn.setEnabled((!isActive));
+        delete_btn.setEnabled((isActive));
+        update_btn.setEnabled((isActive));
         
-        sql = """
-          SELECT 
-              categoryName,
-              description,
-              unit
-          FROM tbl_categories
-          WHERE isActive = ?;
-        """;
 
-        pstmt = conn.prepareStatement(sql);
-        pstmt.setInt(1, isActive);
-        category_tbl.refreshTable(pstmt.executeQuery());
+        category_tbl.refreshTable(categoryDAO.getCategories(isActive));
         
       }catch(Exception ex){
         ex.printStackTrace();
@@ -235,20 +221,10 @@ public class Category extends JFrame{
         int command = JOptionPane.showConfirmDialog(null,
                 "Do you want to proceed re-adding this Category?",
                 "UPDATE CONFIRMATION", JOptionPane.OK_CANCEL_OPTION
-        );
-        if (!(command == JOptionPane.OK_OPTION)) return;
+        ); if (!(command == JOptionPane.OK_OPTION)) return;
+        
 
-        sql = """
-              UPDATE tbl_categories
-              SET
-                isActive = 1
-              WHERE categoryName = ?;
-              """;
-
-        pstmt = conn.prepareStatement(sql);
-        pstmt.setString(1, ""+selected_record[0]);
-
-        int rowsAffected = pstmt.executeUpdate();
+        int rowsAffected = categoryDAO.setCategoryStatus(selected_record[0].toString(), true);
 
         if (rowsAffected > 0) {
             JOptionPane.showMessageDialog(null,
@@ -319,40 +295,22 @@ public class Category extends JFrame{
         }
         
         if( !is_category_name_not_changed ){
-          sql = """
-            SELECT *
-            FROM tbl_categories
-            WHERE  categoryName = UPPER(?);
-          """;
 
-          pstmt = conn.prepareStatement(sql);
-          pstmt.setString(1,new_category_name);
-
-          rs = pstmt.executeQuery();
-
-          if(rs.next()){
+          boolean isCategoryAlreadyExists = categoryDAO.isCategoryAlreadyExists(new_category_name);
+          if(isCategoryAlreadyExists){
             JOptionPane.showMessageDialog(null,
                     "\"" + new_category_name + "\" already exists in the category. Please check your Category list.",
                   "Category Already Exists", JOptionPane.WARNING_MESSAGE);
             return;
           }
         }
-        
-        sql = """
-            UPDATE tbl_categories
-            SET categoryName = UPPER(?),
-                description = LOWER(?),
-                unit = LOWER(?)
-            WHERE categoryName = UPPER(?);
-        """;
 
-        pstmt = conn.prepareStatement(sql);
-        pstmt.setString(1,new_category_name);
-        pstmt.setString(2,new_description);
-        pstmt.setString(3,new_unit);
-        pstmt.setString(4,selected_record[0].toString());
-
-        int rowsAffected = pstmt.executeUpdate();
+        int rowsAffected = categoryDAO.updateCategoryInfo(
+                new_category_name, 
+                new_description,
+                new_unit, 
+                selected_record[0].toString()
+        );
 
         if (rowsAffected > 0) {
             JOptionPane.showMessageDialog(null,
@@ -389,18 +347,10 @@ public class Category extends JFrame{
         
         category_name_field.setText(selected_record[0].toString());
         
-        sql = """
-           SELECT *
-           FROM tbl_products
-           WHERE categoryName = ?;
-        """;
         
-        pstmt = conn.prepareStatement(sql);
-        pstmt.setString(1,selected_record[0].toString());
-        
-        rs = pstmt.executeQuery();
-        
-        if(rs.next()){
+        boolean isCategoryUsed = productDAO.isProductAlreadyExists("ALL", selected_record[0].toString());
+
+        if(isCategoryUsed){
           JOptionPane.showMessageDialog(null,
                 "Cannot delete this category because it has existing products associated with it.\n"+
                         "Please remove or reassign all products (active and archived) before deleting this category.",
@@ -415,20 +365,10 @@ public class Category extends JFrame{
                 "Do you want to proceed deleting this Category('" + selected_record[0] + "')?",
                 "DELETE CONFIRMATION", JOptionPane.OK_CANCEL_OPTION,
                 JOptionPane.WARNING_MESSAGE
-        );
-        if (!(command == JOptionPane.OK_OPTION)) return;
+        ); if (!(command == JOptionPane.OK_OPTION)) return;
         
         
-        sql = """
-           UPDATE tbl_categories
-              SET isActive = 0
-           WHERE categoryName = ?;
-        """;
-        
-        pstmt = conn.prepareStatement(sql);
-        pstmt.setString(1,selected_record[0].toString());
-        
-        int rowsAffected = pstmt.executeUpdate();
+        int rowsAffected = categoryDAO.setCategoryStatus(selected_record[0].toString(), false);
         
         if (rowsAffected > 0) {
             JOptionPane.showMessageDialog(null,
