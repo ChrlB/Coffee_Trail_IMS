@@ -23,6 +23,23 @@ public class UserDAO {
     this.conn = DBConnection.getInstance().getDBConnection();
   }
   
+  public boolean isUsernameAvailable(String new_username){
+    try{
+      sql = """
+            SELECT * FROM tbl_users 
+            WHERE username = ?
+            """;
+      pstmt = conn.prepareStatement(sql);
+      pstmt.setString(1,new_username);
+      ResultSet rs = pstmt.executeQuery();
+
+      return !rs.next();
+
+    }catch(Exception ex){
+      return false;
+    }
+  }
+  
   public ResultSet getUserInfoByUsername(String input_username){
     try{
       sql = """
@@ -83,6 +100,89 @@ public class UserDAO {
     }
   }
   
+  public ResultSet getUsers(boolean isActive){
+    try{
+      sql = """
+        SELECT 
+          userID,
+          username,
+          password,
+          fullname,
+          DATE_FORMAT(dateCreated,"%Y-%d-%m") as dateCreated
+        FROM tbl_users
+        WHERE isActive = ?;
+      """;
+      
+      pstmt = conn.prepareStatement(sql);
+      pstmt.setInt(1, ((isActive)? 1:0) );
+      return pstmt.executeQuery();
+    }catch(SQLException ex){
+      ex.printStackTrace();
+      return null;
+    }
+  }
+  
+  public int updateUserInfo(String new_username, String new_fullname, int userID){
+    try{
+      sql = """
+        UPDATE tbl_users
+        SET username = ?,
+            fullname = ?
+        WHERE userID = ?
+      """;
+
+      pstmt = conn.prepareStatement(sql);
+      pstmt.setString(1, new_username);
+      pstmt.setString(2, new_fullname);
+      pstmt.setInt(3, userID);
+      
+      return pstmt.executeUpdate();
+    }catch(SQLException ex ){
+      ex.printStackTrace();
+      return 0;
+    }
+  }
+  
+  public int setUserStatus(boolean isActive, int userID){
+    try{
+      sql = """
+        UPDATE tbl_users
+        SET
+          isActive = ?
+        WHERE userID = ?;
+      """;
+
+      pstmt = conn.prepareStatement(sql);
+      pstmt.setInt(1, ((isActive)? 1:0) );
+      pstmt.setInt(2, userID);
+      
+      return pstmt.executeUpdate();
+    }catch(SQLException ex){
+      ex.printStackTrace();
+      return 0;
+    }
+  }
+  
+  public int addNewUser(String username, String hashed_password, String full_name){
+    try{
+      sql = """
+        INSERT INTO tbl_users
+          (username, password, fullname)
+        values(?,?,?);
+      """;
+      
+      pstmt = conn.prepareStatement(sql);
+      pstmt.setString(1,username);
+      pstmt.setString(2, hashed_password);
+      pstmt.setString(3, full_name);
+      
+      return pstmt.executeUpdate();
+    }catch(SQLException ex){
+      ex.printStackTrace();
+      return 0;
+    }
+  }
+  
   public void recordUserLoginLog(int loggedin_user_ID){
     try{
       sql = "INSERT INTO tbl_userlogs(userID) VALUES(?)";
@@ -113,4 +213,6 @@ public class UserDAO {
       ex.printStackTrace();
     }
   }
+  
+  
 }

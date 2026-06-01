@@ -4,6 +4,7 @@
  */
 package com.github.chrlb.coffe_trail_ims.UI.Forms;
 
+import com.github.chrlb.coffe_trail_ims.DAO.UserDAO;
 import java.awt.Color;
 import java.sql.PreparedStatement;
 import javax.swing.*;
@@ -22,6 +23,9 @@ import com.github.chrlb.coffe_trail_ims.UI.Windows.User;
 public class NewUser extends JFrame{
   User parent;
   Connection conn;
+  
+  UserDAO userDAO;
+  
   TextFieldBuilder username_field,
                    full_name_field,
                    password_field,
@@ -41,6 +45,8 @@ public class NewUser extends JFrame{
   public NewUser(User parent){
     this.conn = DBConnection.getInstance().getDBConnection();
     this.parent = parent;
+    
+    userDAO = new UserDAO();
     
     username_field = new TextFieldBuilder(true, 130, 50, 320, 50, 15);
     full_name_field = new TextFieldBuilder(true, 130, 130, 320, 50, 15);
@@ -123,20 +129,16 @@ public class NewUser extends JFrame{
         return;
       }
       
-      if( !(parent.isUsernameAvailable(username)) ) return;
+      if( !(userDAO.isUsernameAvailable(username)) ){
+        JOptionPane.showMessageDialog(null, 
+                "username is already been used",
+                "Warning",JOptionPane.WARNING_MESSAGE);
+        return;
+      }
       
       String hashed_password = BCrypt.hashpw(password, BCrypt.gensalt(12));
       
-      sql = """
-            INSERT INTO tbl_users
-              (username, password, fullname)
-            values(?,?,?);
-            """;
-      pstmt = conn.prepareStatement(sql);
-      pstmt.setString(1,username);
-      pstmt.setString(2, hashed_password);
-      pstmt.setString(3, full_name);
-      int rowsAffected = pstmt.executeUpdate();
+      int rowsAffected = userDAO.addNewUser(username, hashed_password, full_name);
 
       if (rowsAffected > 0) {
           JOptionPane.showMessageDialog(null,

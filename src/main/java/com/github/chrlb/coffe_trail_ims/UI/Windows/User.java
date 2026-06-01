@@ -4,6 +4,7 @@
  */
 package com.github.chrlb.coffe_trail_ims.UI.Windows;
 
+import com.github.chrlb.coffe_trail_ims.DAO.UserDAO;
 import com.github.chrlb.coffe_trail_ims.UI.Windows.Dashboard;
 import com.github.chrlb.coffe_trail_ims.UI.Forms.NewUser;
 import java.awt.Color;
@@ -27,6 +28,8 @@ public class User extends JFrame{
     Connection conn;
     Header header;
     
+    UserDAO userDAO;
+    
     ButtonBuilder new_btn, 
                   delete_btn,
                   change_password_btn,
@@ -39,8 +42,6 @@ public class User extends JFrame{
                      username_field,
                      full_name_field;
     ResultSet rs;
-    String sql;
-    PreparedStatement pstmt;
     
     TableBuilder users_tbl;
     JScrollPane users_tbl_scrollpane;
@@ -58,6 +59,8 @@ public class User extends JFrame{
         this.conn = DBConnection.getInstance().getDBConnection();
         this.user_ID = UserSession.getInstance().getUserID();
         header = new Header();
+        
+        userDAO = new UserDAO();
         
         readd_user_btn = new ButtonBuilder("RE-ADD USER", 650, 115, 175, 30,14);
         readd_user_btn.setEnabled(false);
@@ -115,19 +118,7 @@ public class User extends JFrame{
         user_form_panel.add(full_name_field);
 
 
-
-        sql = """
-              SELECT 
-                userID,
-                username,
-                password,
-                fullname,
-                DATE_FORMAT(dateCreated,"%Y-%d-%m") as dateCreated
-              FROM tbl_users
-              WHERE isActive = 1;
-              """;
-        pstmt = conn.prepareStatement(sql);
-        rs = pstmt.executeQuery();
+        rs = userDAO.getUsers(true);
         
         users_tbl = new TableBuilder(rs);
         users_tbl.addMouseListener(new MouseAdapter() {
@@ -151,7 +142,7 @@ public class User extends JFrame{
         });
         
         ImageIcon icon = new ImageIcon(getClass().getResource(IconsHandler.ICON_CUP));
-         this.setIconImage(icon.getImage());
+        this.setIconImage(icon.getImage());
         this.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
         this.setTitle("USER");
         this.setLayout(null);
@@ -211,20 +202,9 @@ public class User extends JFrame{
         int command = JOptionPane.showConfirmDialog(null,
                 "Do you want to proceed re-adding this user?",
                 "UPDATE CONFIRMATION", JOptionPane.OK_CANCEL_OPTION
-        );
-        if (!(command == JOptionPane.OK_OPTION)) return;
+        ); if (!(command == JOptionPane.OK_OPTION)) return;
 
-        sql = """
-              UPDATE tbl_users
-              SET
-                isActive = 1
-              WHERE userID = ?;
-              """;
-
-        pstmt = conn.prepareStatement(sql);
-        pstmt.setInt(1, (int)selected_record[0]);
-
-        int rowsAffected = pstmt.executeUpdate();
+        int rowsAffected = userDAO.setUserStatus(true, (int)selected_record[0]);
 
         if (rowsAffected > 0) {
             JOptionPane.showMessageDialog(null,
@@ -257,16 +237,15 @@ public class User extends JFrame{
         selected_record = new Object[]{
           users_tbl.getValueAt(row, 0),
           users_tbl.getValueAt(row, 1),
-          users_tbl.getValueAt(row, 2)
+          users_tbl.getValueAt(row, 3)
         };
           
         int command = JOptionPane.showConfirmDialog(null,
                 "Do you want to proceed updating this record?",
                 "UPDATE CONFIRMATION", JOptionPane.OK_CANCEL_OPTION
-        );
-        if (command == CANCEL) return;
+        ); if (command == CANCEL) return;
 
-        String user_id = user_id_field.getText().trim();
+        
         String new_username = username_field.getText().trim();
         String new_fullname = full_name_field.getText().trim();
 
@@ -278,29 +257,29 @@ public class User extends JFrame{
             return;
         }
         
+        
         if( 
             new_username.equals(selected_record[1]) &&
             new_fullname.equals(selected_record[2]) 
           ){
+          System.out.println("No changes to update.");
           JOptionPane.showMessageDialog(null,
                     "No changes to update.",
                     "Message", JOptionPane.INFORMATION_MESSAGE);
           return;
-        }else  if(!(isUsernameAvailable(new_username)) ) return;
+        }else if(!(userDAO.isUsernameAvailable(new_username)) && !new_username.equals(selected_record[1])){
+          JOptionPane.showMessageDialog(null, 
+                  "username is already been used",
+                  "Warning",JOptionPane.WARNING_MESSAGE);
+          return;
+        }
         
-        sql = """
-              UPDATE tbl_users
-              SET username = ?,
-                  fullname = ?
-              WHERE userID = ?
-              """;
 
-        pstmt = conn.prepareStatement(sql);
-        pstmt.setString(1, new_username);
-        pstmt.setString(2, new_fullname);
-        pstmt.setInt(3, (int) selected_record[0]);
-
-        int rowsAffected = pstmt.executeUpdate();
+        int rowsAffected = userDAO.updateUserInfo(
+                new_username, 
+                new_fullname, 
+                (int) selected_record[0]
+        );
 
         if (rowsAffected > 0) {
             JOptionPane.showMessageDialog(null,
@@ -347,18 +326,10 @@ public class User extends JFrame{
         int command = JOptionPane.showConfirmDialog(null,
                 "Do you want to proceed deleting this record?",
                 "DELETE CONFIRMATION", JOptionPane.OK_CANCEL_OPTION 
-        );
-        if (command == CANCEL) return;
+        ); if (command == CANCEL) return;
         
-        sql = """
-              UPDATE tbl_users
-                SET isActive = 0
-              WHERE userID = ?;
-              """;
-        pstmt = conn.prepareStatement(sql);
-        pstmt.setInt(1, (int) selected_record[0]);
         
-        int rowsAffected = pstmt.executeUpdate();
+        int rowsAffected = userDAO.setUserStatus(false, (int) selected_record[0]);
         
         if (rowsAffected > 0) {
           JOptionPane.showMessageDialog(null,
@@ -401,54 +372,21 @@ public class User extends JFrame{
       }
     }
     
-    public boolean isUsernameAvailable(String new_username){
-      try{
-        sql = """
-              SELECT * FROM tbl_users 
-              WHERE username = ?
-              """;
-        pstmt = conn.prepareStatement(sql);
-        pstmt.setString(1,new_username);
-        rs = pstmt.executeQuery();
-
-        if(rs.next()){
-          JOptionPane.showMessageDialog(null, 
-                  "username is already been used",
-                  "Warning",JOptionPane.WARNING_MESSAGE);
-          return false;
-        }
-        return true;
-      }catch(Exception ex){
-        return false;
-      }
-    }
+    
     
     public void refreshTable(){
       try{
-        int isActive = (user_combobox.getSelectedItem().toString().equals("Active"))? 1:0;
+        boolean isActive = (user_combobox.getSelectedItem().toString().equals("Active"));
       
-        readd_user_btn.setEnabled((isActive != 1));
-        delete_btn.setEnabled((isActive == 1));
-        update_btn.setEnabled((isActive == 1));
-        change_password_btn.setEnabled((isActive == 1));
-                
-        sql = """
-              SELECT 
-                userID,
-                username,
-                password,
-                fullname,
-                DATE_FORMAT(dateCreated,"%Y-%d-%m") as dateCreated
-              FROM tbl_users
-              WHERE isActive = ?;
-              """;
+        readd_user_btn.setEnabled((!isActive));
+        delete_btn.setEnabled((isActive));
+        update_btn.setEnabled((isActive));
+        change_password_btn.setEnabled((isActive));
         
-        pstmt = conn.prepareStatement(sql);
-        pstmt.setInt(1, isActive);
-        users_tbl.refreshTable(pstmt.executeQuery());
+        users_tbl.refreshTable(userDAO.getUsers(isActive));
         
       }catch(Exception ex){
-        
+        ex.printStackTrace();
       }
     }
 

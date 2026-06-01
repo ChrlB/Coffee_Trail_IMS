@@ -377,6 +377,11 @@ public class Product extends JFrame{
                   "No changes to update.",
                   "Message", JOptionPane.INFORMATION_MESSAGE);
         return;
+      }else if((productDAO.isProductAlreadyExists(new_product_name, "ALL")) && !new_product_name.equals(selected_record[1])){
+        JOptionPane.showMessageDialog(null, 
+                "productName is already been used",
+                "Warning",JOptionPane.WARNING_MESSAGE);
+        return;
       }
       
       

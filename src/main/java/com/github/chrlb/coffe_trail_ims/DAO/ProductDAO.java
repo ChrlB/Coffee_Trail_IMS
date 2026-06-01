@@ -226,13 +226,14 @@ public class ProductDAO {
       SELECT *
       FROM tbl_products
       WHERE   productName = LOWER(?) OR ? = 'ALL'
-          AND categoryName = ? ;
+          AND categoryName = ? OR ? = 'ALL';
     """;
 
     pstmt = conn.prepareStatement(sql);
     pstmt.setString(1,productName);
     pstmt.setString(2,productName);
     pstmt.setString(3,category);
+    pstmt.setString(4,category);
 
     ResultSet rs = pstmt.executeQuery();
     return (rs.next());
